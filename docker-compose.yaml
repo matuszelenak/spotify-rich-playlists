@@ -1,0 +1,19 @@
+version: "3"
+services:
+  api:
+    build:
+      dockerfile: backend.Dockerfile
+      context: .
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      dockerfile: prod.Dockerfile
+      context: .
+      args:
+        - VITE_API_LINK=http://localhost:8000
+    ports:
+      - "80:80"
