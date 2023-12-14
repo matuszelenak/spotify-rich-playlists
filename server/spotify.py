@@ -2,7 +2,7 @@ import base64
 
 import requests
 
-from server.constants import client_id, client_secret
+from server.constants import client_id, client_secret, frontend_url
 from server.models import SpotifyToken
 
 basic_auth_token = base64.b64encode(f'{client_id}:{client_secret}'.encode("ascii")).decode("ascii")
@@ -18,7 +18,7 @@ def get_access_token(code):
         data={
             'grant_type': 'authorization_code',
             'code': code,
-            'redirect_uri': 'http://localhost/spotify-auth-callback'
+            'redirect_uri': f'{frontend_url}/spotify-auth-callback'
         }
     )
     return resp
