@@ -10,10 +10,6 @@ on:
       - 'package-lock.json'
       - '.github/workflows/frontend.yml'
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: rich-spotify-playlist
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,14 +24,14 @@ jobs:
         name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Build and push
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        uses: docker/build-push-action@v3
         with:
           push: true
           context: .
           file: prod.Dockerfile
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags: ghcr.io/matuszelenak/rich-spotify-playlist:latest
