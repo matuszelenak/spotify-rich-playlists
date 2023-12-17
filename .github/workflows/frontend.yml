@@ -6,7 +6,7 @@ on:
     paths:
       - 'src/**'
       - 'package.json'
-      - 'prod.Dockerfile'
+      - 'prod.frontend.Dockerfile'
       - 'package-lock.json'
       - '.github/workflows/frontend.yml'
 

@@ -6,7 +6,7 @@ on:
     paths:
       - 'server/**'
       - 'requirements.txt'
-      - 'backend.Dockerfile'
+      - 'prod.backend.Dockerfile'
       - '.github/workflows/backend.yml'
 
 jobs:
