@@ -35,5 +35,5 @@ jobs:
           context: .
           build-args: |
             VITE_API_LINK=/api
-          file: prod.Dockerfile
+          file: prod.frontend.Dockerfile
           tags: ghcr.io/matuszelenak/rich-spotify-playlist:latest

@@ -3,6 +3,4 @@ build
 .dockerignore
 Dockerfile
 prod.Dockerfile
-website
-build.sh
 README.md

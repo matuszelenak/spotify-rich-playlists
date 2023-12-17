@@ -2,7 +2,7 @@ import {Container, Drawer, List, ListItem, ListItemText} from "@mui/material";
 import {useMutation, useQuery, useQueryClient} from "react-query";
 import {useState} from "react";
 import {GridColDef} from '@mui/x-data-grid';
-import {DataGridPro, GridRowOrderChangeParams} from "@mui/x-data-grid-pro";
+import {DataGridPro, GridCellParams, GridRowOrderChangeParams} from "@mui/x-data-grid-pro";
 import {Line} from "react-chartjs-2";
 import {CategoryScale, Chart as ChartJS, Legend, LinearScale, LineElement, PointElement, Title, Tooltip,} from 'chart.js';
 import {getPlaylistTracks} from "./spotify";
@@ -11,15 +11,23 @@ import {axiosBackend, axiosSpotify} from "./api";
 
 
 const columns: GridColDef[] = [
-    {field: 'index', headerName: '#'},
-    {field: 'tempo', headerName: 'BPM', editable: true},
-    {field: 'name', headerName: 'Name'},
-    {field: 'artists', headerName: 'Artist'},
-    {field: 'album', headerName: 'Album'},
-    {field: 'energy', headerName: 'Energy'},
-    {field: 'danceability', headerName: 'Danceability'},
-    {field: 'instrumentalness', headerName: 'Instrumentalness'},
-    {field: 'valence', headerName: 'Valence'}
+    {field: 'index', headerName: '#', width: 50},
+    {field: 'tempo', headerName: 'BPM', editable: true, width: 75},
+    {field: 'name', headerName: 'Name', flex: 0.15},
+    {field: 'artists', headerName: 'Artist', flex: 0.1},
+    {field: 'album', headerName: 'Album', flex: 0.1},
+    {field: 'energy', headerName: 'Energy', width: 75},
+    {field: 'instrumentalness', headerName: 'Instrumentalness', width: 75},
+    {field: 'valence', headerName: 'Valence', width: 75},
+    {
+        field: 'previewUrl',
+        headerName: 'Preview',
+        renderCell: (params: GridCellParams) => (
+            // @ts-ignore
+            <audio controls><source src={params.value} type="audio/mpeg"/></audio>
+        ),
+        width:350
+    }
 ];
 
 ChartJS.register(
@@ -32,7 +40,7 @@ ChartJS.register(
     Legend
 );
 
-export const options = {
+const options = {
     responsive: true,
     plugins: {
         legend: {
@@ -146,8 +154,8 @@ const Dashboard = () => {
                     ))}
                 </List>
             </Drawer>
-            <Container>
-                <Line options={options} data={bpmData} height={75}/>
+            <Container maxWidth={false}>
+                <Line options={options} data={bpmData} height={45}/>
                 <div style={{height: 400, width: '100%'}}>
                     <DataGridPro
                         loading={isLoading}
