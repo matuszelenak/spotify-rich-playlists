@@ -2,7 +2,7 @@ name: Build backend image
 
 on:
   push:
-    branches: [ "github-actions" ]
+    branches: [ "master" ]
     paths:
       - 'server/**'
       - 'requirements.txt'

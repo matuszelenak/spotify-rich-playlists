@@ -2,7 +2,7 @@ name: Build frontend image
 
 on:
   push:
-    branches: [ "github-actions" ]
+    branches: [ "master" ]
     paths:
       - 'src/**'
       - 'package.json'
