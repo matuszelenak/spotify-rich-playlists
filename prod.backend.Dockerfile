@@ -24,5 +24,6 @@ COPY --from=builder /app/requirements.txt .
 RUN pip install --no-cache /wheels/*
 
 COPY server server
+WORKDIR server
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--root-path", "/api"]
