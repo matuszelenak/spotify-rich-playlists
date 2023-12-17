@@ -64,7 +64,7 @@ export const triggerAuthorization = () => {
     let url = new URL("https://accounts.spotify.com/authorize");
     let params = new URLSearchParams();
     params.append("client_id", "427d011a2a8047c3b1277d7bf14edd91");
-    params.append("redirect_uri", "http://localhost/spotify-auth-callback");
+    params.append("redirect_uri", `${window.location.protocol}//${window.location.host}/spotify-auth-callback`);
     params.append("scope", scopes)
     params.append("state", "4247")
     params.append("response_type", "code")

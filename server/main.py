@@ -4,12 +4,11 @@ from fastapi import FastAPI, Depends, Body, Request, HTTPException
 from sqlalchemy.orm import Session
 from starlette.middleware.cors import CORSMiddleware
 
-from . import models
-from .database import engine, get_db
-from .models import SpotifyToken
-from .spotify import get_access_token, get_access_token_refresh
+import database
+import spotify
+import models
 
-models.Base.metadata.create_all(bind=engine)
+database.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI()
 origins = [
@@ -27,9 +26,9 @@ app.add_middleware(
 
 
 @app.get("/callback")
-async def spotify_callback(code: str, db: Session = Depends(get_db)):
-    resp = get_access_token(code)
-    token = SpotifyToken(
+async def spotify_callback(code: str, db: Session = Depends(database.get_db)):
+    resp = spotify.get_access_token(code)
+    token = models.SpotifyToken(
         **resp.json(),
     )
     db.add(token)
@@ -40,15 +39,15 @@ async def spotify_callback(code: str, db: Session = Depends(get_db)):
 
 
 @app.get('/token-refresh')
-async def spotify_refresh_token(request: Request, db: Session = Depends(get_db)):
+async def spotify_refresh_token(request: Request, db: Session = Depends(database.get_db)):
     print(request.headers)
     old_access_token = request.headers['Authorization'][7:]
     print(old_access_token)
-    spotify_token = db.query(SpotifyToken).filter(models.SpotifyToken.access_token == old_access_token).first()
+    spotify_token = db.query(models.SpotifyToken).filter(models.SpotifyToken.access_token == old_access_token).first()
     if spotify_token is None:
         raise HTTPException(status_code=404, detail="Access token not found")
 
-    updated_token = get_access_token_refresh(spotify_token)
+    updated_token = spotify.get_access_token_refresh(spotify_token)
     spotify_token.expires_in = updated_token['expires_in']
     spotify_token.access_token = updated_token['access_token']
     db.commit()
@@ -58,7 +57,7 @@ async def spotify_refresh_token(request: Request, db: Session = Depends(get_db))
 
 
 @app.post('/songs/{song_id}/bpm')
-async def override_song_bpm(song_id, payload: Any = Body(None), db: Session = Depends(get_db)):
+async def override_song_bpm(song_id, payload: Any = Body(None), db: Session = Depends(database.get_db)):
     existing = db.query(models.Song).filter(models.Song.id == song_id).first()
     if existing:
         existing.bpm = payload['tempo']

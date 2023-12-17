@@ -13,13 +13,17 @@ export default defineConfig({
     ],
     publicDir: 'public',
     server: {
+        host: "0.0.0.0",
+        hmr: {
+            clientPort: 3000,
+        },
         port: 3000,
-        open: true
+        open: false
     },
     resolve: {
         alias: {
             '@': path.resolve(__dirname, 'src'),
             '@mui/styled-engine': '@mui/styled-engine-sc'
         },
-    },
+    }
 });

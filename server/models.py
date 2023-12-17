@@ -1,16 +1,16 @@
 from sqlalchemy import Column, Integer, String, Float
 
-from .database import Base
+import database
 
 
-class Song(Base):
+class Song(database.Base):
     __tablename__ = "songs"
 
     id = Column(String, primary_key=True, index=True)
     bpm = Column(Float)
 
 
-class SpotifyToken(Base):
+class SpotifyToken(database.Base):
     __tablename__ = 'spotify_token'
 
     id = Column(Integer, primary_key=True, index=True)

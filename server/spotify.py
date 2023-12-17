@@ -2,10 +2,12 @@ import base64
 
 import requests
 
-from server.constants import client_id, client_secret
-from server.models import SpotifyToken
+import constants
+import models
 
-basic_auth_token = base64.b64encode(f'{client_id}:{client_secret}'.encode("ascii")).decode("ascii")
+basic_auth_token = base64.b64encode(
+    f'{constants.client_id}:{constants.client_secret}'.encode("ascii")
+).decode("ascii")
 
 
 def get_access_token(code):
@@ -18,13 +20,13 @@ def get_access_token(code):
         data={
             'grant_type': 'authorization_code',
             'code': code,
-            'redirect_uri': 'http://localhost/spotify-auth-callback'
+            'redirect_uri': f'{constants.frontend_url}/spotify-auth-callback'
         }
     )
     return resp
 
 
-def get_access_token_refresh(token: SpotifyToken):
+def get_access_token_refresh(token: models.SpotifyToken):
     resp = requests.post(
         'https://accounts.spotify.com/api/token',
         headers={
