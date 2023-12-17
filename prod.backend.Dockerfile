@@ -25,4 +25,4 @@ RUN pip install --no-cache /wheels/*
 
 COPY server server
 
-CMD ["uvicorn", "server.main:app", "--host", "0.0.0.0", "--root-path", "/api"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--root-path", "/api"]
