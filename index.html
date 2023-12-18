@@ -14,4 +14,17 @@
 <div id="root"></div>
 <script type="module" src="/src/index.tsx"></script>
 </body>
+
+<script>
+  window.onload = function() {
+    const divs = document.getElementsByTagName('div');
+    const specificContent = 'MUI X Missing license key';
+    for (let i = 0; i < divs.length; i++) {
+      if (divs[i].textContent === specificContent) {
+        divs[i].parentNode.removeChild(divs[i]);
+        i--;
+      }
+    }
+  };
+</script>
 </html>
