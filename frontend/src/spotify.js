@@ -25,8 +25,9 @@ const getPlaylistTracks = async (playlist_id) => {
                 name: track.name,
                 artists: track.artists.map(a => a.name).join(', '),
                 album: track.album.name,
-                duration: track.duration,
+                duration: track.duration_ms,
                 previewUrl: track.preview_url,
+                ourBpm: 'N/A',
                 ...features
             }
         }

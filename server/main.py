@@ -1,5 +1,7 @@
 from typing import Any
+from urllib.parse import urlencode
 
+import requests
 from fastapi import FastAPI, Depends, Body, Request, HTTPException
 from sqlalchemy.orm import Session
 from starlette.middleware.cors import CORSMiddleware
@@ -7,8 +9,7 @@ from starlette.middleware.cors import CORSMiddleware
 import database
 import spotify
 import models
-
-database.Base.metadata.create_all(bind=database.engine)
+import constants
 
 app = FastAPI()
 origins = [
@@ -40,9 +41,7 @@ async def spotify_callback(code: str, db: Session = Depends(database.get_db)):
 
 @app.get('/token-refresh')
 async def spotify_refresh_token(request: Request, db: Session = Depends(database.get_db)):
-    print(request.headers)
     old_access_token = request.headers['Authorization'][7:]
-    print(old_access_token)
     spotify_token = db.query(models.SpotifyToken).filter(models.SpotifyToken.access_token == old_access_token).first()
     if spotify_token is None:
         raise HTTPException(status_code=404, detail="Access token not found")
@@ -56,17 +55,42 @@ async def spotify_refresh_token(request: Request, db: Session = Depends(database
     return {"spotify_access_token": spotify_token.access_token}
 
 
+# @app.post('/songs/{song_id}/bpm')
+# async def override_song_bpm(song_id, payload: Any = Body(None), db: Session = Depends(database.get_db)):
+#     existing = db.query(models.Song).filter(models.Song.id == song_id).first()
+#     if existing:
+#         existing.bpm = payload['tempo']
+#         db.commit()
+#     else:
+#         override = models.Song(
+#             id=song_id,
+#             bpm=payload['tempo']
+#         )
+#         db.add(override)
+#         db.commit()
+#     return {}
+
+
 @app.post('/songs/{song_id}/bpm')
-async def override_song_bpm(song_id, payload: Any = Body(None), db: Session = Depends(database.get_db)):
-    existing = db.query(models.Song).filter(models.Song.id == song_id).first()
+async def get_song_bpm(song_id, payload: Any = Body(None), db: Session = Depends(database.get_db)):
+    existing = db.query(models.SpotifySongBpm).filter(models.SpotifySongBpm.id == song_id).first()
     if existing:
-        existing.bpm = payload['tempo']
-        db.commit()
+        return {'bpm': existing.bpm}
     else:
-        override = models.Song(
+        if not payload['preview_url']:
+            return {'bpm': None}
+
+        q = urlencode({'preview_url': payload['preview_url']})
+        try:
+            resp = requests.get(f'{constants.bpm_api_url}?{q}')
+        except:
+            return {'bpm': None}
+
+        instance = models.SpotifySongBpm(
             id=song_id,
-            bpm=payload['tempo']
+            bpm=resp.json()['bpm']
         )
-        db.add(override)
+        db.add(instance)
         db.commit()
-    return {}
+
+        return {'bpm': instance.bpm}

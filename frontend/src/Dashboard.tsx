@@ -12,21 +12,32 @@ import {axiosBackend, axiosSpotify} from "./api";
 
 const columns: GridColDef[] = [
     {field: 'index', headerName: '#', width: 50},
-    {field: 'tempo', headerName: 'BPM', editable: true, width: 75},
+    {field: 'tempo', headerName: 'BPM', editable: true, width: 50, valueGetter: (p) => p.value.toFixed(0)},
+    {field: 'ourBpm', headerName: 'BPM 2', editable: false, width: 50},
+    {
+        field: 'duration',
+        headerName: 'Duration',
+        width: 75,
+        valueGetter: (params) => {
+            let minutes = Math.floor(params.value / 60000);
+            let seconds = ((params.value % 60000) / 1000).toFixed(0);
+            return `${minutes}:${seconds}`;
+        }
+    },
     {field: 'name', headerName: 'Name', flex: 0.15},
     {field: 'artists', headerName: 'Artist', flex: 0.1},
     {field: 'album', headerName: 'Album', flex: 0.1},
     {field: 'energy', headerName: 'Energy', width: 75},
-    {field: 'instrumentalness', headerName: 'Instrumentalness', width: 75},
-    {field: 'valence', headerName: 'Valence', width: 75},
+    //{field: 'instrumentalness', headerName: 'Instrumentalness', width: 75},
+    //{field: 'valence', headerName: 'Valence', width: 75},
     {
         field: 'previewUrl',
         headerName: 'Preview',
-        renderCell: (params: GridCellParams) => (
+        renderCell: (params: GridCellParams) => !!params.value && (
             // @ts-ignore
-            <audio controls><source src={params.value} type="audio/mpeg"/></audio>
-        ),
-        width:350
+            <audio controls src={params.value} preload="none"></audio>
+        ) || <></>,
+        width: 350
     }
 ];
 
@@ -51,7 +62,7 @@ const options = {
 
 
 const Dashboard = () => {
-    const { playlistId } = useParams<string>()
+    const {playlistId} = useParams<string>()
     const navigate = useNavigate()
 
     const [isLoading, setIsLoading] = useState(true)
@@ -80,6 +91,16 @@ const Dashboard = () => {
             onSuccess: (data) => {
                 setTracks(data)
                 setIsLoading(false)
+                data.forEach((track: any) => {
+                    axiosBackend({
+                        url: `/songs/${track.id}/bpm`,
+                        data: {preview_url: track.previewUrl},
+                        method: 'post'
+                    }).then(({data}) => {
+                        //@ts-ignore
+                        setTracks(tracks => tracks.map(item => item.id === track.id ? {...item, ourBpm: data.bpm || item.tempo} : item));
+                    })
+                })
             }
         }
     )
@@ -125,7 +146,7 @@ const Dashboard = () => {
             {
                 label: 'BPM',
                 // @ts-ignore
-                data: tracks.map((track) => track.tempo),
+                data: tracks.map((track) => track.ourBpm || 0),
                 borderColor: 'rgb(255, 99, 132)',
                 backgroundColor: 'rgba(255, 99, 132, 0.5)',
             },

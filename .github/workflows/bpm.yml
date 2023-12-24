@@ -1,11 +1,11 @@
-name: Build backend image
+name: Build BPM detector image
 
 on:
   push:
     branches: [ "master" ]
     paths:
-      - 'server/**'
-      - '.github/workflows/backend.yml'
+      - 'bpm/**'
+      - '.github/workflows/bpm.yml'
 
 jobs:
   build:
@@ -29,6 +29,6 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          context: server
-          file: prod.Dockerfile
-          tags: ghcr.io/matuszelenak/rich-spotify-playlist-api:latest
+          context: bpm
+          file: Dockerfile
+          tags: ghcr.io/matuszelenak/rich-spotify-playlist-bpm:latest

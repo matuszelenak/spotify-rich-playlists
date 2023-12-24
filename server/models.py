@@ -20,3 +20,10 @@ class SpotifyToken(database.Base):
     scope = Column(String)
     expires_in = Column(Integer)
     refresh_token = Column(String)
+
+
+class SpotifySongBpm(database.Base):
+    __tablename__ = 'spotify_song_bpm'
+
+    id = Column(String, primary_key=True, index=True)
+    bpm = Column(Float)
