@@ -11,8 +11,6 @@ import spotify
 import models
 import constants
 
-database.Base.metadata.create_all(bind=database.engine)
-
 app = FastAPI()
 origins = [
     "*",
@@ -43,9 +41,7 @@ async def spotify_callback(code: str, db: Session = Depends(database.get_db)):
 
 @app.get('/token-refresh')
 async def spotify_refresh_token(request: Request, db: Session = Depends(database.get_db)):
-    print(request.headers)
     old_access_token = request.headers['Authorization'][7:]
-    print(old_access_token)
     spotify_token = db.query(models.SpotifyToken).filter(models.SpotifyToken.access_token == old_access_token).first()
     if spotify_token is None:
         raise HTTPException(status_code=404, detail="Access token not found")

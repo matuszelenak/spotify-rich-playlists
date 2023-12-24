@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED 1
 
 RUN apk update \
  && apk add --no-cache python3 py3-pip \
- && apk add --no-cache bash gcc musl-dev python3-dev libffi-dev openssl-dev cargo
+ && apk add --no-cache bash gcc musl-dev python3-dev libffi-dev openssl-dev cargo postgresql-dev musl-dev
 
 RUN pip install --upgrade pip
 

@@ -25,8 +25,5 @@ export default defineConfig({
             '@': path.resolve(__dirname, 'src'),
             '@mui/styled-engine': '@mui/styled-engine-sc'
         },
-    },
-    define: {
-        global: "window",
-    },
+    }
 });
