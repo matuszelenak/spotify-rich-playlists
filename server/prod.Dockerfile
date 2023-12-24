@@ -23,7 +23,7 @@ COPY --from=builder /app/wheels /wheels
 COPY --from=builder /app/requirements.txt .
 RUN pip install --no-cache /wheels/*
 
+RUN apk update && apk add --no-cache bash postgresql-dev musl-dev
 COPY . .
-WORKDIR server
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--root-path", "/api"]
