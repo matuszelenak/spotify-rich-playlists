@@ -18,6 +18,7 @@ services:
       - FRONTEND_URL=http://localhost:3000
     volumes:
       - ./server:/app
+    command: uvicorn main:app --host 0.0.0.0 --root-path /api
     ports:
       - "8000:8000"
 

@@ -26,4 +26,4 @@ RUN pip install --no-cache /wheels/*
 RUN apk update && apk add --no-cache bash postgresql-dev musl-dev
 COPY . .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--root-path", "/api"]
+ENTRYPOINT ["bash", "./entrypoint.sh"]
