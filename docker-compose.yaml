@@ -10,8 +10,8 @@ services:
   api:
     container_name: spotify_api
     build:
-      dockerfile: dev.backend.Dockerfile
-      context: .
+      dockerfile: dev.Dockerfile
+      context: server
     env_file:
       - .env
     environment:
@@ -24,16 +24,25 @@ services:
   frontend:
     container_name: spotify_frontend
     build:
-      dockerfile: dev.frontend.Dockerfile
-      context: .
+      dockerfile: dev.Dockerfile
+      context: frontend
     ports:
       - "3000:3000"
     volumes:
-      - ./src:/app/src
-      - ./vite.config.js:/app/vite.config.js
-      - ./tsconfig.json:/app/tsconfig.json
-      - ./public:/app/public
-      - ./index.html:/app/index.html
+      - ./frontend/src:/app/src
+      - ./frontend/vite.config.js:/app/vite.config.js
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
     environment:
       - VITE_API_LINK=http://localhost/api
     command: "npm start"
+
+  bpm:
+    container_name: spotify_bpm
+    build:
+      dockerfile: Dockerfile
+      context: bpm
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
