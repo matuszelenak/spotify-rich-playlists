@@ -32,5 +32,6 @@ jobs:
           context: frontend
           build-args: |
             VITE_API_LINK=/api
+            VITE_WS_LINK=wss://swing.the-killer.app/ws
           file: frontend/prod.Dockerfile
           tags: ghcr.io/matuszelenak/rich-spotify-playlist:latest
