@@ -1,20 +1,20 @@
-import {Container, Drawer, List, ListItem, ListItemText} from "@mui/material";
+import {AppBar, Container, Drawer, IconButton, Tab, Tabs, Toolbar, Typography} from "@mui/material";
 import {useMutation, useQuery, useQueryClient} from "react-query";
 import {useState} from "react";
 import {GridColDef} from '@mui/x-data-grid';
-import {DataGridPro, GridCellParams, GridRowOrderChangeParams} from "@mui/x-data-grid-pro";
-import {Line} from "react-chartjs-2";
-import {CategoryScale, Chart as ChartJS, Legend, LinearScale, LineElement, PointElement, Title, Tooltip,} from 'chart.js';
+import {DataGridPro, GridCellParams, GridRowOrderChangeParams, GridToolbar} from "@mui/x-data-grid-pro";
 import {getPlaylistTracks} from "./spotify";
 import {NavLink, useNavigate, useParams} from "react-router-dom";
 import {axiosBackend, axiosSpotify} from "./api";
 import useWebSocket from "react-use-websocket";
+import MenuIcon from '@mui/icons-material/Menu';
+import BpmGraph from "./components/bpmGraph";
 
 
 const columns: GridColDef[] = [
     {field: 'index', headerName: '#', width: 50},
     {field: 'tempo', headerName: 'BPM', editable: true, width: 50, valueGetter: (p) => p.value.toFixed(0)},
-    {field: 'ourBpm', headerName: 'BPM 2', editable: false, width: 50},
+    {field: 'ourBpm', headerName: 'BPM', editable: false, width: 50},
     {
         field: 'duration',
         headerName: 'Duration',
@@ -25,12 +25,10 @@ const columns: GridColDef[] = [
             return `${minutes}:${seconds}`;
         }
     },
+    {field: 'energy', headerName: 'Energy', width: 75},
     {field: 'name', headerName: 'Name', flex: 0.15},
     {field: 'artists', headerName: 'Artist', flex: 0.1},
     {field: 'album', headerName: 'Album', flex: 0.1},
-    {field: 'energy', headerName: 'Energy', width: 75},
-    //{field: 'instrumentalness', headerName: 'Instrumentalness', width: 75},
-    //{field: 'valence', headerName: 'Valence', width: 75},
     {
         field: 'previewUrl',
         headerName: 'Preview',
@@ -42,28 +40,19 @@ const columns: GridColDef[] = [
     }
 ];
 
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend
-);
-
-const options = {
-    responsive: true,
-    plugins: {
-        legend: {
-            position: 'top' as const,
-        }
-    },
-};
-
+function LinkTab(props: any) {
+    return (
+        <Tab
+            component="a"
+            aria-current={props.selected && 'page'}
+            {...props}
+        />
+    );
+}
 
 const Dashboard = () => {
     const {playlistId} = useParams<string>()
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const navigate = useNavigate()
 
     const [isLoading, setIsLoading] = useState(true)
@@ -83,21 +72,17 @@ const Dashboard = () => {
             }
         }
     )
-    const {
-        sendMessage,
-        sendJsonMessage,
-        lastMessage,
-        lastJsonMessage,
-        readyState,
-        getWebSocket,
-    } = useWebSocket(import.meta.env.VITE_WS_LINK, {
+
+    const {sendJsonMessage} = useWebSocket(import.meta.env.VITE_WS_LINK, {
         share: true,
         onOpen: () => console.log('opened'),
-        //Will attempt to reconnect on all close events, such as server shutting down
         shouldReconnect: (closeEvent) => true,
-        onMessage: (message) => {
-            const parsed = JSON.parse(message.data)
-            setTracks(tracks => tracks.map(item => item.id === parsed.id ? {...item, ourBpm: parsed.tempo || item.tempo} : item));
+        onMessage: (event) => {
+            const messageJson = JSON.parse(event.data)
+            console.log(messageJson)
+            if (messageJson.event == 'tempoExtracted') {
+                setTracks(tracks => tracks.map(item => !!messageJson.data[item.id] ? {...item, ourBpm: messageJson.data[item.id] || item.tempo} : item));
+            }
         }
     });
 
@@ -109,19 +94,18 @@ const Dashboard = () => {
             onSuccess: (data) => {
                 setTracks(data)
                 setIsLoading(false)
-                data.forEach((track: any) => {
-                    if (!!track.previewUrl) {
-                        sendJsonMessage({
-                            action: 'extractTempo',
-                            previewUrl: track.previewUrl,
-                            id: track.id
-                        })
+                sendJsonMessage(
+                    {
+                        event: 'extractTempo',
+                        data: Object.fromEntries(
+                            data.map((track: any) => [track.id, track.previewUrl])
+                        )
                     }
-                })
+                )
+
             }
         }
     )
-
     const {mutate: spotifyReorder} = useMutation(
         (data: any) =>
             axiosSpotify({
@@ -156,45 +140,39 @@ const Dashboard = () => {
         })
     };
 
-
-    const bpmData = {
-        labels: tracks.map((track: any) => track.index),
-        datasets: [
-            {
-                label: 'BPM',
-                // @ts-ignore
-                data: tracks.map((track) => track.ourBpm || 0),
-                borderColor: 'rgb(255, 99, 132)',
-                backgroundColor: 'rgba(255, 99, 132, 0.5)',
-            },
-            {
-                label: 'Energy',
-                // @ts-ignore
-                data: tracks.map((track) => track.energy * 100),
-                borderColor: 'rgb(53, 162, 235)',
-                backgroundColor: 'rgba(53, 162, 235, 0.5)',
-            }
-        ]
-    }
-
     return (
-        <div style={{display: "flex"}}>
-            <Drawer variant="permanent" style={{width: "240px"}}>
-                <List>
-                    {playlistsFetched && playlistsResponse.data.items.map((playlist: any) => (
-                        <ListItem button key={playlist.id}>
-                            <NavLink
-                                to={`/${playlist.id}`}
-                            >
-                                <ListItemText primary={playlist.name.substring(0, 30)}/>
-                            </NavLink>
-                        </ListItem>
-                    ))}
-                </List>
-            </Drawer>
+        <div>
+            <AppBar variant="outlined" position="static">
+                <Toolbar>
+                    <IconButton
+                        edge="start"
+                        color="inherit"
+                        aria-label="menu"
+                        onClick={() => setIsDrawerOpen(true)}
+                    >
+                        <MenuIcon/>
+                    </IconButton>
+                    <Typography variant="h6">{playlistsFetched && playlistsResponse.data.items.filter((i: any) => i.id == playlistId)[0].name}</Typography>
+
+                    <Drawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} style={{width: "240px"}}>
+                        <Tabs
+                            orientation="vertical"
+                            value={playlistId}
+                            aria-label="nav tabs example"
+                            role="navigation"
+                        >
+                            {playlistsFetched && playlistsResponse.data.items.map((playlist: any) => (
+                                <LinkTab onClick={() => setIsDrawerOpen(false)} value={playlist.id} label={playlist.name.substring(0, 30)} to={`/${playlist.id}`}
+                                         component={NavLink}/>
+                            ))}
+                        </Tabs>
+                    </Drawer>
+                </Toolbar>
+            </AppBar>
             <Container maxWidth={false}>
-                <Line options={options} data={bpmData} height={45}/>
+
                 <div style={{height: 400, width: '100%'}}>
+                    <BpmGraph tracks={tracks}/>
                     <DataGridPro
                         loading={isLoading}
                         autoHeight
@@ -208,6 +186,10 @@ const Dashboard = () => {
                         }
                         }
                         onProcessRowUpdateError={(error) => console.log(error)}
+                        disableColumnFilter
+                        slots={{
+                            toolbar: GridToolbar,
+                        }}
                     />
                 </div>
             </Container>
