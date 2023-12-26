@@ -35,18 +35,26 @@ export const queryClient = new QueryClient({
         onError: async (error, query) => {
             // @ts-ignore
             if (error.request.status === 401) {
-                axiosBackend({
-                    method: 'get',
-                    url: '/token-refresh'
-                }).then(({data}) => {
-                    setAuthHeader(data.spotify_access_token)
-                    // queryClient.refetchQueries(query.queryKey);
-                }).catch((error) => {
-                    if (error.response.status === 404) {
+                const refreshToken = localStorage.getItem('spotify_refresh_token')
+                if (!!refreshToken) {
+                    const q = new URLSearchParams({
+                        refresh_token: refreshToken
+                    })
+                    axiosBackend({
+                        method: 'get',
+                        url: `/refresh-token?${q.toString()}`
+                    }).then(({data}) => {
+                        setAuthHeader(data.access_token)
+                        queryClient.refetchQueries(query.queryKey);
+                    }).catch((error) => {
                         unsetToken()
                         triggerAuthorization()
-                    }
-                })
+                    })
+                } else {
+                    unsetToken()
+                    triggerAuthorization()
+                }
+
             }
         }
     })
@@ -59,6 +67,7 @@ export const unsetToken = () => {
     delete axiosBackend.defaults.headers.common['Authorization'];
     delete axiosSpotify.defaults.headers.common['Authorization'];
     localStorage.removeItem('spotify_access_token');
+    localStorage.removeItem('spotify_refresh_token');
 }
 export const triggerAuthorization = () => {
     let url = new URL("https://accounts.spotify.com/authorize");

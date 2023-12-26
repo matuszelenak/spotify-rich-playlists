@@ -1,11 +1,11 @@
-name: Build backend image
+name: Build BPM detector image
 
 on:
   push:
     branches: [ "master" ]
     paths:
       - 'server/**'
-      - '.github/workflows/backend.yml'
+      - '.github/workflows/api.yml'
 
 jobs:
   build:
