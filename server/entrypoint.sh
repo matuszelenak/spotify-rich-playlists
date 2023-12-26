@@ -1,2 +1,2 @@
-alembic upgrade head
+npx prisma generate
 exec "$@"

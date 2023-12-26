@@ -1,14 +1,10 @@
-FROM python:3.11-alpine3.18
-
+FROM node:20.10-alpine
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PATH /app/node_modules/.bin:$PATH
+COPY package*.json ./
 
-RUN apk update && apk add python3-dev bash postgresql-dev musl-dev
-RUN pip install --upgrade pip
+RUN npm install
+RUN npm install -g nodemon
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install -r requirements.txt
-
-ENTRYPOINT ["bash", "./entrypoint.sh"]
+ENTRYPOINT ["sh", "./entrypoint.sh"]

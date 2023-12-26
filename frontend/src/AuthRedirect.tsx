@@ -33,8 +33,9 @@ const SpotifyAuthCallback = () => {
         }),
         {
             onSuccess: ({data}) => {
-                localStorage.setItem('spotify_access_token', data.spotify_access_token);
-                setAuthHeader(data.spotify_access_token)
+                localStorage.setItem('spotify_access_token', data.access_token);
+                localStorage.setItem('spotify_refresh_token', data.refresh_token);
+                setAuthHeader(data.access_token)
                 navigate('/')
             }
         }

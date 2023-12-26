@@ -8,6 +8,7 @@ import {CategoryScale, Chart as ChartJS, Legend, LinearScale, LineElement, Point
 import {getPlaylistTracks} from "./spotify";
 import {NavLink, useNavigate, useParams} from "react-router-dom";
 import {axiosBackend, axiosSpotify} from "./api";
+import useWebSocket from "react-use-websocket";
 
 
 const columns: GridColDef[] = [
@@ -82,6 +83,23 @@ const Dashboard = () => {
             }
         }
     )
+    const {
+        sendMessage,
+        sendJsonMessage,
+        lastMessage,
+        lastJsonMessage,
+        readyState,
+        getWebSocket,
+    } = useWebSocket(import.meta.env.VITE_WS_LINK, {
+        share: true,
+        onOpen: () => console.log('opened'),
+        //Will attempt to reconnect on all close events, such as server shutting down
+        shouldReconnect: (closeEvent) => true,
+        onMessage: (message) => {
+            const parsed = JSON.parse(message.data)
+            setTracks(tracks => tracks.map(item => item.id === parsed.id ? {...item, ourBpm: parsed.tempo || item.tempo} : item));
+        }
+    });
 
     useQuery(
         ['playlistTracks', playlistId],
@@ -92,14 +110,13 @@ const Dashboard = () => {
                 setTracks(data)
                 setIsLoading(false)
                 data.forEach((track: any) => {
-                    axiosBackend({
-                        url: `/songs/${track.id}/bpm`,
-                        data: {preview_url: track.previewUrl},
-                        method: 'post'
-                    }).then(({data}) => {
-                        //@ts-ignore
-                        setTracks(tracks => tracks.map(item => item.id === track.id ? {...item, ourBpm: data.bpm || item.tempo} : item));
-                    })
+                    if (!!track.previewUrl) {
+                        sendJsonMessage({
+                            action: 'extractTempo',
+                            previewUrl: track.previewUrl,
+                            id: track.id
+                        })
+                    }
                 })
             }
         }
