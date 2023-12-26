@@ -44,6 +44,7 @@ export const queryClient = new QueryClient({
                         method: 'get',
                         url: `/refresh-token?${q.toString()}`
                     }).then(({data}) => {
+                        localStorage.setItem('spotify_access_token', data.access_token)
                         setAuthHeader(data.access_token)
                         queryClient.refetchQueries(query.queryKey);
                     }).catch((error) => {
@@ -54,7 +55,6 @@ export const queryClient = new QueryClient({
                     unsetToken()
                     triggerAuthorization()
                 }
-
             }
         }
     })

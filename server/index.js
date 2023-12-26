@@ -5,11 +5,12 @@ const AudioContext = require("web-audio-api").AudioContext;
 const MusicTempo = require("music-tempo");
 const Bottleneck = require("bottleneck/es5");
 const PrismaClient = require("@prisma/client").PrismaClient
+const _ = require("lodash");
 
 const expressWs = expressWsImport(express());
 const app = expressWs.app;
 const port = 4000
-const context = new AudioContext({sampleRate:    44100});
+const context = new AudioContext({sampleRate: 44100});
 const prisma = new PrismaClient()
 
 const limiter = new Bottleneck({
@@ -21,25 +22,35 @@ app.use(cors())
 
 app.ws('/ws', function (ws, req) {
     ws.on('message', async (msg) => {
-        const parsed = JSON.parse(msg)
-        if (parsed.action === 'extractTempo') {
-            const existing = await prisma.spotifySongTempo.findFirst({where: {id: parsed.id}})
-            if (existing) {
+        const messageJson = JSON.parse(msg)
+        if (messageJson.event === 'extractTempo') {
+            const existing = await prisma.spotifySongTempo.findMany({where: {id: {in: Object.keys(messageJson.data)}}})
+            if (existing.length > 0) {
                 ws.send(JSON.stringify({
-                    id: parsed.id,
-                    previewUrl: parsed.previewUrl,
-                    tempo: existing.tempo.toFixed(0)
+                    event: "tempoExtracted",
+                    data: Object.fromEntries(existing.map(instance => [instance.id, instance.tempo.toFixed(0)]))
                 }))
-            } else {
+            }
+
+            const existingIds = existing.map((instance) => instance.id)
+            const [processed, toProcess] = _.partition(Object.entries(messageJson.data), ([id, url]) => {
+                return existingIds.includes(id)
+            })
+
+            for (const [id, previewUrl] of toProcess) {
+                if (!previewUrl) continue
                 await limiter.schedule(async () => {
-                    await extractTempo(parsed.previewUrl, async (tempo) => {
-                        await prisma.spotifySongTempo.create({
-                            data: {id: parsed.id, tempo: tempo}
-                        })
+                    await extractTempo(previewUrl, async (tempo) => {
+                        try {
+                            await prisma.spotifySongTempo.create({
+                                data: {id: id, tempo: tempo}
+                            })
+                        } catch (e) {
+
+                        }
                         await ws.send(JSON.stringify({
-                            id: parsed.id,
-                            previewUrl: parsed.previewUrl,
-                            tempo: tempo.toFixed(0)
+                            event: "tempoExtracted",
+                            data: {[id]: tempo.toFixed(0)}
                         }))
                     })
                 });
