@@ -15,15 +15,14 @@ services:
       context: frontend
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/vite.config.js:/app/vite.config.js
       - ./frontend/tsconfig.json:/app/tsconfig.json
       - ./frontend/public:/app/public
       - ./frontend/index.html:/app/index.html
-    environment:
-      - VITE_API_LINK=http://localhost/api
-      - VITE_WS_LINK=ws://localhost/api/ws
     command: "npm start"
 
   api:

@@ -4,7 +4,7 @@ import {SpotifyApi} from '@spotify/web-api-ts-sdk';
 
 
 export const sdk = SpotifyApi.withUserAuthorization(
-    '427d011a2a8047c3b1277d7bf14edd91',
+    import.meta.env.VITE_SPOTIFY_CLIENT_ID,
     'http://localhost:3000/spotify-auth-callback',
     [
         "playlist-read-private",
