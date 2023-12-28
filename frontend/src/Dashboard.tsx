@@ -5,7 +5,7 @@ import {GridColDef} from '@mui/x-data-grid';
 import {DataGridPro, GridCellParams, GridRowOrderChangeParams, GridToolbar} from "@mui/x-data-grid-pro";
 import {getPlaylistTracks} from "./spotify";
 import {NavLink, useNavigate, useParams} from "react-router-dom";
-import {axiosBackend, axiosSpotify} from "./api";
+import {axiosBackend, sdk} from "./api";
 import useWebSocket from "react-use-websocket";
 import MenuIcon from '@mui/icons-material/Menu';
 import BpmGraph from "./components/bpmGraph";
@@ -13,7 +13,7 @@ import BpmGraph from "./components/bpmGraph";
 
 const columns: GridColDef[] = [
     {field: 'index', headerName: '#', width: 50},
-    {field: 'tempo', headerName: 'BPM', editable: true, width: 50, valueGetter: (p) => p.value.toFixed(0)},
+    {field: 'tempo', headerName: 'BPM', editable: false, width: 50, valueGetter: (p) => p.value.toFixed(0)},
     {field: 'ourBpm', headerName: 'BPM', editable: false, width: 50},
     {
         field: 'duration',
@@ -60,14 +60,13 @@ const Dashboard = () => {
     const [tracks, setTracks] = useState([])
     const {isSuccess: playlistsFetched, data: playlistsResponse} = useQuery(
         ['playlists'],
-        () => axiosSpotify({
-            method: 'get',
-            url: `/me/playlists`
-        }),
+        async () => {
+            return await sdk.currentUser.playlists.playlists(50)
+        },
         {
-            onSuccess: ({data}) => {
+            onSuccess: ({items}) => {
                 if (playlistId == null) {
-                    navigate(`/${data.items[0].id}`)
+                    navigate(`/${items[0].id}`)
                 }
             }
         }
@@ -75,11 +74,9 @@ const Dashboard = () => {
 
     const {sendJsonMessage} = useWebSocket(import.meta.env.VITE_WS_LINK, {
         share: true,
-        onOpen: () => console.log('opened'),
         shouldReconnect: (closeEvent) => true,
         onMessage: (event) => {
             const messageJson = JSON.parse(event.data)
-            console.log(messageJson)
             if (messageJson.event == 'tempoExtracted') {
                 setTracks(tracks => tracks.map(item => !!messageJson.data[item.id] ? {...item, ourBpm: messageJson.data[item.id] || item.tempo} : item));
             }
@@ -107,12 +104,10 @@ const Dashboard = () => {
         }
     )
     const {mutate: spotifyReorder} = useMutation(
-        (data: any) =>
-            axiosSpotify({
-                method: 'put',
-                url: `/playlists/${playlistId}/tracks`,
-                data: data
-            }),
+        async (data: any) => {
+            console.log(data)
+            await sdk.playlists.movePlaylistItems(playlistId, data.range_start, data.range_length, data.insert_before)
+        },
         {
             onSuccess: () => {
                 queryClient.invalidateQueries(['playlistTracks', playlistId])
@@ -135,14 +130,14 @@ const Dashboard = () => {
         setIsLoading(true)
         await spotifyReorder({
             range_start: params.oldIndex,
-            insert_before: params.targetIndex,
+            insert_before: params.oldIndex < params.targetIndex ? params.targetIndex + 1 : params.targetIndex,
             range_length: 1
         })
     };
 
     return (
         <div>
-            <AppBar variant="outlined" position="static">
+            <AppBar position="static">
                 <Toolbar>
                     <IconButton
                         edge="start"
@@ -152,7 +147,7 @@ const Dashboard = () => {
                     >
                         <MenuIcon/>
                     </IconButton>
-                    <Typography variant="h6">{playlistsFetched && playlistsResponse.data.items.filter((i: any) => i.id == playlistId)[0].name}</Typography>
+                    <Typography variant="h6">{playlistsFetched && playlistsResponse.items.filter((i: any) => i.id == playlistId)[0].name}</Typography>
 
                     <Drawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} style={{width: "240px"}}>
                         <Tabs
@@ -161,9 +156,14 @@ const Dashboard = () => {
                             aria-label="nav tabs example"
                             role="navigation"
                         >
-                            {playlistsFetched && playlistsResponse.data.items.map((playlist: any) => (
-                                <LinkTab onClick={() => setIsDrawerOpen(false)} value={playlist.id} label={playlist.name.substring(0, 30)} to={`/${playlist.id}`}
-                                         component={NavLink}/>
+                            {playlistsFetched && playlistsResponse.items.map((playlist: any) => (
+                                <LinkTab
+                                    onClick={() => setIsDrawerOpen(false)}
+                                    value={playlist.id} label={playlist.name.substring(0, 30)}
+                                    to={`/${playlist.id}`}
+                                    component={NavLink}
+                                    key={playlist.id}
+                                />
                             ))}
                         </Tabs>
                     </Drawer>

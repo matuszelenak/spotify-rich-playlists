@@ -9,6 +9,8 @@
     "@mui/material": "^5.14.20",
     "@mui/styled-engine-sc": "^6.0.0-alpha.7",
     "@mui/x-data-grid-pro": "^6.18.3",
+    "@spotify/web-api-ts-sdk": "^1.1.2",
+    "@types/lodash": "^4.14.202",
     "@types/node": "^20.10.3",
     "@types/react": "^18.2.42",
     "@vitejs/plugin-react": "^4.2.1",

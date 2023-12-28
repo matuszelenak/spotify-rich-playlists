@@ -1,45 +1,19 @@
-import {useLocation, useNavigate} from "react-router-dom";
-import React from "react";
-import {useQuery} from "react-query";
-import {axiosBackend, setAuthHeader, triggerAuthorization} from "./api";
+import {useNavigate} from "react-router-dom";
+import React, {useEffect} from "react";
+import {sdk} from "./api";
 
-function useURLQuery() {
-    const { search } = useLocation()
-    return React.useMemo(() => new URLSearchParams(search), [search])
-}
-
-// @ts-ignore
-export function RequireAuth({ children }) {
-    const token = localStorage.getItem('spotify_access_token');
-
-    if (token != null) {
-        setAuthHeader(token)
-        return children
-    }
-
-    triggerAuthorization()
-}
 
 const SpotifyAuthCallback = () => {
-    const query = useURLQuery()
-    const code = query.get('code')
     const navigate = useNavigate()
 
-    useQuery(
-        ['auth_token'],
-        () => axiosBackend({
-            method: 'get',
-            url: `/callback?code=${code}`
-        }),
-        {
-            onSuccess: ({data}) => {
-                localStorage.setItem('spotify_access_token', data.access_token);
-                localStorage.setItem('spotify_refresh_token', data.refresh_token);
-                setAuthHeader(data.access_token)
-                navigate('/')
-            }
+    useEffect(() => {
+        async function fetchMyAPI() {
+            await sdk.authenticate()
+            navigate('/')
         }
-    )
+
+        fetchMyAPI()
+    }, [])
 
     return (
         <></>
