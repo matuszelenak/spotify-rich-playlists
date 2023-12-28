@@ -59,49 +59,6 @@ app.ws('/ws', function (ws, req) {
     });
 });
 
-app.get('/callback', async (req, res) => {
-    const code = req.query.code;
-    const resp = await fetch(
-        'https://accounts.spotify.com/api/token',
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Authorization': `Basic ${process.env.SPOTIFY_BASIC_AUTH}`
-            },
-            body: new URLSearchParams({
-                'grant_type': 'authorization_code',
-                'code': code,
-                'redirect_uri': `${process.env.FRONTEND_URL}/spotify-auth-callback`
-            })
-        }
-    )
-    res.send(
-        await resp.json()
-    )
-})
-
-app.get('/refresh-token', async (req, res) => {
-    const refresh_token = req.query.refresh_token;
-    const resp = await fetch(
-        'https://accounts.spotify.com/api/token',
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Authorization': `Basic ${process.env.SPOTIFY_BASIC_AUTH}`
-            },
-            body: new URLSearchParams({
-                'grant_type': 'refresh_token',
-                'refresh_token': refresh_token,
-            })
-        }
-    )
-    res.send(
-        await resp.json()
-    )
-})
-
 const extractTempo = async (previewUrl, callback) => {
     console.log(`Extracting tempo for ${previewUrl}`)
     const audioResponse = await fetch(previewUrl).catch((reason) => {

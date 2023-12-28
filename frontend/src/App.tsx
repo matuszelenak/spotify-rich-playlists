@@ -1,30 +1,29 @@
 import React, {useEffect} from 'react';
-import {Route, Routes} from 'react-router-dom'
+import {Route, Routes, useNavigate} from 'react-router-dom'
 import {QueryClientProvider} from 'react-query'
-import SpotifyAuthCallback, {RequireAuth} from "./AuthRedirect";
+import SpotifyAuthCallback from "./AuthRedirect";
 import Dashboard from "./Dashboard";
-import {queryClient, setAuthHeader} from "./api";
+import {queryClient, sdk} from "./api";
 
 // @ts-ignore
-
-
 function App() {
+    const navigate = useNavigate()
+
     useEffect(() => {
-        const token = localStorage.getItem('spotify_access_token');
-        if (token) {
-            setAuthHeader(token)
-        } else {
+        async function fetchMyAPI() {
+            await sdk.authenticate()
+            navigate('/')
         }
-    }, []);
+
+        fetchMyAPI()
+    }, [])
 
     return (
         <QueryClientProvider client={queryClient}>
             <Routes>
                 <Route path="spotify-auth-callback" element={<SpotifyAuthCallback/>}/>
                 <Route path=":playlistId?" element={
-                    <RequireAuth>
-                        <Dashboard/>
-                    </RequireAuth>
+                    <Dashboard/>
                 }/>
             </Routes>
         </QueryClientProvider>
