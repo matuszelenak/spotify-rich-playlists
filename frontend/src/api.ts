@@ -5,7 +5,7 @@ import {SpotifyApi} from '@spotify/web-api-ts-sdk';
 
 export const sdk = SpotifyApi.withUserAuthorization(
     import.meta.env.VITE_SPOTIFY_CLIENT_ID,
-    'http://localhost:3000/spotify-auth-callback',
+    `${window.location.protocol}//${window.location.host}/spotify-auth-callback`,
     [
         "playlist-read-private",
         "playlist-read-collaborative",

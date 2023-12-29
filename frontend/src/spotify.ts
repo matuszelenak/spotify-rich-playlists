@@ -29,7 +29,7 @@ const getPlaylistTracks = async (playlist_id: string) => {
                 album: track.album.name,
                 duration: track.duration_ms,
                 previewUrl: track.preview_url,
-                ourBpm: 'N/A',
+                ourBpm: null,
                 ...features
             }
         }
