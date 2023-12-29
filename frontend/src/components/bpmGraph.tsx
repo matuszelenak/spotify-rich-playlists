@@ -1,5 +1,5 @@
-import {Line} from "react-chartjs-2";
 import {CategoryScale, Chart as ChartJS, Legend, LinearScale, LineElement, PointElement, Title, Tooltip} from 'chart.js';
+import Chart from "react-apexcharts";
 
 ChartJS.register(
     CategoryScale,
@@ -20,29 +20,43 @@ const options = {
     },
 };
 
-const BpmGraph = ({tracks}: {tracks: any}) => {
-    const bpmData = {
-        labels: tracks.map((track: any) => track.index),
-        datasets: [
-            {
-                label: 'BPM',
-                // @ts-ignore
-                data: tracks.map((track) => track.ourBpm || 0),
-                borderColor: 'rgb(255, 99, 132)',
-                backgroundColor: 'rgba(255, 99, 132, 0.5)',
-            },
-            {
-                label: 'Energy',
-                // @ts-ignore
-                data: tracks.map((track) => track.energy * 100),
-                borderColor: 'rgb(53, 162, 235)',
-                backgroundColor: 'rgba(53, 162, 235, 0.5)',
-            }
-        ]
-    }
+const BpmGraph = ({tracks}: { tracks: any }) => {
+    const tempoData = tracks.map((track) => [track.index, track.ourBpm || track.tempo])
+    const energyData = tracks.map((track) => [track.index, parseInt((track.energy * 100).toFixed(0))])
 
     return (
-        <Line options={options} data={bpmData} height={45}/>
+        <Chart
+            options={
+                {
+                    dataLabels: {
+                        enabled: false
+                    },
+                    chart: {
+                        height: 300,
+                        type: 'area'
+                    },
+                    colors: ['#FF6384', '#35A2EB', '#546E7A', '#E91E63', '#FF9800'],
+                    stroke: {
+                        curve: 'smooth'
+                    },
+                    fill: {
+                        type: 'gradient',
+                        gradient: {
+                            opacityFrom: 0.6,
+                            opacityTo: 0.8,
+                        }
+                    },
+                }
+            }
+            type={"area"}
+            series={
+                [
+                    {data: tempoData, name: 'Tempo'},
+                    {data: energyData, name: 'Energy'}
+                ]
+            }
+            height={300}
+        />
     )
 }
 

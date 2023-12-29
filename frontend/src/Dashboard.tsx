@@ -78,7 +78,7 @@ const Dashboard = () => {
         onMessage: (event) => {
             const messageJson = JSON.parse(event.data)
             if (messageJson.event == 'tempoExtracted') {
-                setTracks(tracks => tracks.map(item => !!messageJson.data[item.id] ? {...item, ourBpm: messageJson.data[item.id] || item.tempo} : item));
+                setTracks(tracks => tracks.map(item => !!messageJson.data[item.id] ? {...item, ourBpm: messageJson.data[item.id]} : item));
             }
         }
     });
