@@ -23,7 +23,7 @@ function LinkTab(props: any) {
     );
 }
 
-const columns: GridColDef[] = [
+const defaultColumns: GridColDef[] = [
     {field: 'index', headerName: '#', width: 50},
     {field: 'tempo', headerName: 'BPM', editable: false, width: 50, valueGetter: (p) => p.value.toFixed(0)},
     {field: 'ourBpm', headerName: 'BPM', editable: false, width: 50},
@@ -34,7 +34,7 @@ const columns: GridColDef[] = [
         valueGetter: (params) => {
             let minutes = Math.floor(params.value / 60000);
             let seconds = ((params.value % 60000) / 1000).toFixed(0);
-            return `${minutes}:${seconds}`;
+            return `${minutes}:${seconds.padStart(2, '0')}`;
         }
     },
     {field: 'energy', headerName: 'Energy', width: 75},
@@ -57,7 +57,7 @@ const Dashboard = () => {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const navigate = useNavigate()
 
-    const [isLoading, setIsLoading] = useState(true)
+    const [isLoading, setIsLoading] = useState(false)
     const [tracks, setTracks] = useState<TrackRow[]>([])
     const [selected, setSelected] = useState<TrackRow[]>([])
     const [isEditable, setIsEditable] = useState(false)
@@ -95,6 +95,8 @@ const Dashboard = () => {
     const handleClose = () => {
         setContextMenu(null);
     };
+
+    const columns = [...defaultColumns]
 
     if (isEditable) {
         columns.push({
