@@ -1,8 +1,8 @@
 import Chart from "react-apexcharts";
 
 const BpmGraph = ({tracks}: { tracks: any }) => {
-    const tempoData = tracks.map((track) => [track.index, track.ourBpm || track.tempo])
-    const energyData = tracks.map((track) => [track.index, parseInt((track.energy * 100).toFixed(0))])
+    const tempoData = tracks.map((track, index) => [index + 1, track.ourBpm || track.tempo])
+    const energyData = tracks.map((track, index) => [index + 1, parseInt((track.energy * 100).toFixed(0))])
 
     return (
         <Chart

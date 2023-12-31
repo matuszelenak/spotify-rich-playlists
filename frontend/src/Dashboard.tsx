@@ -2,16 +2,26 @@ import {AppBar, Container, Drawer, IconButton, Menu, MenuItem, Tab, Tabs, Toolba
 import {useMutation, useQuery} from "react-query";
 import React, {useState} from "react";
 import {GridColDef} from '@mui/x-data-grid';
-import {DataGridPro, GridCellParams, GridRowOrderChangeParams, GridToolbar} from "@mui/x-data-grid-pro";
+import {
+    DataGridPro,
+    GridCellParams,
+    GridRowOrderChangeParams,
+    GridToolbarColumnsButton,
+    GridToolbarContainer,
+    GridToolbarDensitySelector,
+    GridToolbarFilterButton
+} from "@mui/x-data-grid-pro";
 import {getPlaylistTracks} from "./spotify";
 import {NavLink, useNavigate, useParams} from "react-router-dom";
-import {axiosBackend, sdk} from "./api";
+import {axiosBackend, queryClient, sdk} from "./api";
 import useWebSocket from "react-use-websocket";
 import MenuIcon from '@mui/icons-material/Menu';
 import BpmGraph from "./components/bpmGraph";
-import {Delete} from "@mui/icons-material";
+import {Delete, Refresh} from "@mui/icons-material";
 import {TrackRow} from "./types";
 import NestedMenuItem from "./components/NestedMenuItem";
+import {GridToolbar} from "./components/GridToolbar";
+import move from "./utils";
 
 function LinkTab(props: any) {
     return (
@@ -170,8 +180,22 @@ const Dashboard = () => {
             insert_before: params.oldIndex < params.targetIndex ? params.targetIndex + 1 : params.targetIndex,
             range_length: 1
         })
+        setTracks(
+            move(tracks, params.oldIndex, params.targetIndex).map((track, index) => ({...track, index: index + 1}))
+        )
         setIsLoading(false)
     };
+
+    const GridToolbar = () => {
+        return (
+            <GridToolbarContainer>
+                <GridToolbarColumnsButton />
+                <GridToolbarFilterButton />
+                <GridToolbarDensitySelector />
+                <Refresh onClick={() => { setIsLoading(true); queryClient.invalidateQueries(['playlistTracks', playlistId]) }}  sx={{cursor: "pointer"}}/>
+            </GridToolbarContainer>
+        );
+    }
 
     return (
         <div>
