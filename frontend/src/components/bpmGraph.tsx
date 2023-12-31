@@ -1,24 +1,4 @@
-import {CategoryScale, Chart as ChartJS, Legend, LinearScale, LineElement, PointElement, Title, Tooltip} from 'chart.js';
 import Chart from "react-apexcharts";
-
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend
-);
-
-const options = {
-    responsive: true,
-    plugins: {
-        legend: {
-            position: 'top' as const,
-        }
-    },
-};
 
 const BpmGraph = ({tracks}: { tracks: any }) => {
     const tempoData = tracks.map((track) => [track.index, track.ourBpm || track.tempo])
