@@ -1,6 +1,6 @@
-import {AppBar, Container, Drawer, IconButton, Tab, Tabs, Toolbar, Typography} from "@mui/material";
-import {useMutation, useQuery, useQueryClient} from "react-query";
-import {useState} from "react";
+import {AppBar, Container, Drawer, IconButton, Menu, MenuItem, Tab, Tabs, Toolbar, Typography} from "@mui/material";
+import {useMutation, useQuery} from "react-query";
+import React, {useState} from "react";
 import {GridColDef} from '@mui/x-data-grid';
 import {DataGridPro, GridCellParams, GridRowOrderChangeParams, GridToolbar} from "@mui/x-data-grid-pro";
 import {getPlaylistTracks} from "./spotify";
@@ -9,7 +9,19 @@ import {axiosBackend, sdk} from "./api";
 import useWebSocket from "react-use-websocket";
 import MenuIcon from '@mui/icons-material/Menu';
 import BpmGraph from "./components/bpmGraph";
+import {Delete} from "@mui/icons-material";
+import {TrackRow} from "./types";
+import NestedMenuItem from "./components/NestedMenuItem";
 
+function LinkTab(props: any) {
+    return (
+        <Tab
+            component="a"
+            aria-current={props.selected && 'page'}
+            {...props}
+        />
+    );
+}
 
 const columns: GridColDef[] = [
     {field: 'index', headerName: '#', width: 50},
@@ -26,9 +38,6 @@ const columns: GridColDef[] = [
         }
     },
     {field: 'energy', headerName: 'Energy', width: 75},
-    {field: 'name', headerName: 'Name', flex: 0.15},
-    {field: 'artists', headerName: 'Artist', flex: 0.1},
-    {field: 'album', headerName: 'Album', flex: 0.1},
     {
         field: 'previewUrl',
         headerName: 'Preview',
@@ -36,19 +45,12 @@ const columns: GridColDef[] = [
             // @ts-ignore
             <audio controls src={params.value} preload="none"></audio>
         ) || <></>,
-        width: 350
-    }
+        width: 135
+    },
+    {field: 'name', headerName: 'Name', flex: 0.15},
+    {field: 'artists', headerName: 'Artist', flex: 0.1},
+    {field: 'album', headerName: 'Album', flex: 0.1}
 ];
-
-function LinkTab(props: any) {
-    return (
-        <Tab
-            component="a"
-            aria-current={props.selected && 'page'}
-            {...props}
-        />
-    );
-}
 
 const Dashboard = () => {
     const {playlistId} = useParams<string>()
@@ -56,21 +58,59 @@ const Dashboard = () => {
     const navigate = useNavigate()
 
     const [isLoading, setIsLoading] = useState(true)
-    const queryClient = useQueryClient()
-    const [tracks, setTracks] = useState([])
-    const {isSuccess: playlistsFetched, data: playlistsResponse} = useQuery(
+    const [tracks, setTracks] = useState<TrackRow[]>([])
+    const [selected, setSelected] = useState<TrackRow[]>([])
+    const [isEditable, setIsEditable] = useState(false)
+
+    const {isSuccess: userFetched, data: user} = useQuery(
+        ['user'],
+        async () => await sdk.currentUser.profile()
+    )
+
+    const {isSuccess: playlistsFetched, data: playlists} = useQuery(
         ['playlists'],
-        async () => {
-            return await sdk.currentUser.playlists.playlists(50)
-        },
+        async () => (await sdk.currentUser.playlists.playlists(50)).items,
         {
-            onSuccess: ({items}) => {
+            onSuccess: (items) => {
                 if (playlistId == null) {
                     navigate(`/${items[0].id}`)
                 }
             }
         }
     )
+
+    const [contextMenu, setContextMenu] = useState<{mouseX: number; mouseY: number;} | null>(null);
+
+    const handleContextMenu = (event: React.MouseEvent) => {
+        event.preventDefault();
+        setContextMenu(
+            contextMenu === null
+                ? {
+                    mouseX: event.clientX + 2,
+                    mouseY: event.clientY - 6,
+                } : null,
+        );
+    };
+
+    const handleClose = () => {
+        setContextMenu(null);
+    };
+
+    if (isEditable) {
+        columns.push({
+            field: 'trackUri',
+            headerName: '',
+            renderCell: (params: GridCellParams) => !!params.value && (
+                // @ts-ignore
+                <Delete sx={{cursor: 'pointer'}} onClick={async () => {
+                    setIsLoading(true)
+                    await sdk.playlists.removeItemsFromPlaylist(playlistId, {tracks: [{uri: params.value}]})
+                    setTracks(tracks.filter((track) => track.trackUri != params.value))
+                    setIsLoading(false)
+                }}/>
+            ) || <></>,
+        })
+    }
 
     const {sendJsonMessage} = useWebSocket(import.meta.env.VITE_WS_LINK, {
         share: true,
@@ -85,17 +125,18 @@ const Dashboard = () => {
 
     useQuery(
         ['playlistTracks', playlistId],
-        () => getPlaylistTracks(playlistId),
+        () => getPlaylistTracks(playlistId, user),
         {
-            enabled: !!playlistId,
-            onSuccess: (data) => {
-                setTracks(data)
+            enabled: !!playlistId && userFetched,
+            onSuccess: ([tracksData, isEditable]) => {
+                setIsEditable(isEditable)
+                setTracks(tracksData)
                 setIsLoading(false)
                 sendJsonMessage(
                     {
                         event: 'extractTempo',
                         data: Object.fromEntries(
-                            data.map((track: any) => [track.id, track.previewUrl])
+                            tracksData.map((track: any) => [track.id, track.previewUrl])
                         )
                     }
                 )
@@ -105,13 +146,7 @@ const Dashboard = () => {
     )
     const {mutate: spotifyReorder} = useMutation(
         async (data: any) => {
-            console.log(data)
             await sdk.playlists.movePlaylistItems(playlistId, data.range_start, data.range_length, data.insert_before)
-        },
-        {
-            onSuccess: () => {
-                queryClient.invalidateQueries(['playlistTracks', playlistId])
-            }
         }
     )
 
@@ -133,6 +168,7 @@ const Dashboard = () => {
             insert_before: params.oldIndex < params.targetIndex ? params.targetIndex + 1 : params.targetIndex,
             range_length: 1
         })
+        setIsLoading(false)
     };
 
     return (
@@ -147,7 +183,7 @@ const Dashboard = () => {
                     >
                         <MenuIcon/>
                     </IconButton>
-                    <Typography variant="h6">{playlistsFetched && playlistsResponse.items.filter((i: any) => i.id == playlistId)[0].name}</Typography>
+                    <Typography variant="h6">{playlistsFetched && playlists.filter((i: any) => i.id == playlistId)[0].name}</Typography>
 
                     <Drawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} style={{width: "240px"}}>
                         <Tabs
@@ -156,7 +192,7 @@ const Dashboard = () => {
                             aria-label="nav tabs example"
                             role="navigation"
                         >
-                            {playlistsFetched && playlistsResponse.items.map((playlist: any) => (
+                            {playlistsFetched && playlists.map((playlist: any) => (
                                 <LinkTab
                                     onClick={() => setIsDrawerOpen(false)}
                                     value={playlist.id} label={playlist.name.substring(0, 30)}
@@ -170,27 +206,59 @@ const Dashboard = () => {
                 </Toolbar>
             </AppBar>
             <Container maxWidth={false}>
-
+                <Menu
+                    open={contextMenu !== null}
+                    onClose={handleClose}
+                    anchorReference="anchorPosition"
+                    anchorPosition={
+                        contextMenu !== null
+                            ? {top: contextMenu.mouseY, left: contextMenu.mouseX}
+                            : undefined
+                    }
+                >
+                    <MenuItem onClick={async () => {
+                        handleClose()
+                        setIsLoading(true)
+                        const selectedUris = selected.map(track => track.trackUri)
+                        await sdk.playlists.removeItemsFromPlaylist(playlistId, {tracks: selectedUris.map(uri => ({uri: uri}))})
+                        setTracks(tracks.filter((track) => !selectedUris.includes(track.trackUri)))
+                        setIsLoading(false)
+                    }}>Delete</MenuItem>
+                    <NestedMenuItem parentMenuOpen={!!contextMenu} label={"Add to playlist"}>
+                        {playlists?.filter(p => p.owner.id == user?.id).map(p => (
+                            <MenuItem onClick={async () => {
+                                await sdk.playlists.addItemsToPlaylist(p.id, selected.map(track => track.trackUri))
+                            }}>
+                                {p.name}
+                            </MenuItem>
+                        ))}
+                    </NestedMenuItem>
+                </Menu>
                 <div style={{height: 400, width: '100%'}}>
                     <BpmGraph tracks={tracks}/>
-                    <DataGridPro
-                        loading={isLoading}
-                        autoHeight
-                        rows={tracks}
-                        columns={columns}
-                        rowReordering
-                        onRowOrderChange={handleRowOrderChange}
-                        processRowUpdate={(updatedRow, originalRow) => {
-                            setIsLoading(true)
-                            overrideBpm(updatedRow)
-                        }
-                        }
-                        onProcessRowUpdateError={(error) => console.log(error)}
-                        disableColumnFilter
-                        slots={{
-                            toolbar: GridToolbar,
-                        }}
-                    />
+                    <div onContextMenu={handleContextMenu}>
+                        <DataGridPro
+                            loading={isLoading}
+                            autoHeight
+                            rows={tracks}
+                            columns={columns}
+                            rowReordering={isEditable}
+                            onRowOrderChange={handleRowOrderChange}
+                            processRowUpdate={(updatedRow, originalRow) => {
+                                setIsLoading(true)
+                                overrideBpm(updatedRow)
+                            }
+                            }
+                            disableColumnFilter
+                            slots={{
+                                toolbar: GridToolbar
+                            }}
+                            onRowSelectionModelChange={(selectedIds) => {
+                                const s = tracks.filter(t => selectedIds.includes(t.id))
+                                setSelected(s)
+                            }}
+                        />
+                    </div>
                 </div>
             </Container>
         </div>
