@@ -18,10 +18,10 @@ import useWebSocket from "react-use-websocket";
 import MenuIcon from '@mui/icons-material/Menu';
 import BpmGraph from "./components/bpmGraph";
 import {Delete, Refresh} from "@mui/icons-material";
-import {TrackRow} from "./types";
+import {EventTempoExtracted, TrackRow, WsMessageEvent} from "./types";
 import NestedMenuItem from "./components/NestedMenuItem";
-import {GridToolbar} from "./components/GridToolbar";
 import move from "./utils";
+import BpmModal from "./components/BpmModal";
 
 function LinkTab(props: any) {
     return (
@@ -35,8 +35,11 @@ function LinkTab(props: any) {
 
 const defaultColumns: GridColDef[] = [
     {field: 'index', headerName: '#', width: 50},
-    {field: 'tempo', headerName: 'BPM', editable: false, width: 50, valueGetter: (p) => p.value.toFixed(0)},
-    {field: 'ourBpm', headerName: 'BPM', editable: false, width: 50},
+    {field: 'tempoData', headerName: 'BPM', width: 75,
+        valueGetter: (params) => {
+            return params.value.manual || params.value.extracted || params.value.spotify;
+        }
+    },
     {
         field: 'duration',
         headerName: 'Duration',
@@ -45,7 +48,7 @@ const defaultColumns: GridColDef[] = [
             let minutes = Math.floor(params.value / 60000);
             let seconds = ((params.value % 60000) / 1000).toFixed(0);
             return `${minutes}:${seconds.padStart(2, '0')}`;
-        }
+        },
     },
     {field: 'energy', headerName: 'Energy', width: 75},
     {
@@ -71,6 +74,7 @@ const Dashboard = () => {
     const [tracks, setTracks] = useState<TrackRow[]>([])
     const [selected, setSelected] = useState<TrackRow[]>([])
     const [isEditable, setIsEditable] = useState(false)
+    const [bpmOpen, setBpmOpen] = useState(false);
 
     const {isSuccess: userFetched, data: user} = useQuery(
         ['user'],
@@ -107,6 +111,11 @@ const Dashboard = () => {
     };
 
     const columns = [...defaultColumns]
+    columns[1]["renderCell"] = (params: GridCellParams) => {
+        return (
+            <div onClick={() => setBpmOpen(true)} style={{cursor: 'pointer'}}>{params.value}</div>
+        )
+    }
 
     if (isEditable) {
         columns.push({
@@ -128,9 +137,14 @@ const Dashboard = () => {
         share: true,
         shouldReconnect: (closeEvent) => true,
         onMessage: (event) => {
-            const messageJson = JSON.parse(event.data)
+            let messageJson = JSON.parse(event.data)
             if (messageJson.event == 'tempoExtracted') {
-                setTracks(tracks => tracks.map(item => !!messageJson.data[item.id] ? {...item, ourBpm: messageJson.data[item.id]} : item));
+                const data = (messageJson as EventTempoExtracted).data
+                setTracks(tracks => tracks.map(item =>
+                    !!data[item.id]
+                        ? {...item, tempoData: {...item.tempoData, extracted: data[item.id].extracted, manual: data[item.id].manual}}
+                        : item
+                ));
             }
         }
     });
@@ -166,7 +180,7 @@ const Dashboard = () => {
         (data: any) =>
             axiosBackend({
                 method: 'post',
-                url: `/songs/${data.id}/bpm`,
+                url: `/bpm-override/${data.id}`,
                 data: data
             }),
         {onSuccess: () => setIsLoading(false)}
@@ -232,6 +246,7 @@ const Dashboard = () => {
                 </Toolbar>
             </AppBar>
             <Container maxWidth={false}>
+                <BpmModal open={bpmOpen} setOpen={setBpmOpen} />
                 <Menu
                     open={contextMenu !== null}
                     onClose={handleClose}
@@ -252,7 +267,7 @@ const Dashboard = () => {
                     }}>Delete</MenuItem>
                     <NestedMenuItem parentMenuOpen={!!contextMenu} label={"Add to playlist"}>
                         {playlists?.filter(p => p.owner.id == user?.id).map(p => (
-                            <MenuItem onClick={async () => {
+                            <MenuItem key={p.id} onClick={async () => {
                                 await sdk.playlists.addItemsToPlaylist(p.id, selected.map(track => track.trackUri))
                             }}>
                                 {p.name}
@@ -270,9 +285,9 @@ const Dashboard = () => {
                             columns={columns}
                             rowReordering={isEditable}
                             onRowOrderChange={handleRowOrderChange}
-                            processRowUpdate={(updatedRow, originalRow) => {
-                                setIsLoading(true)
-                                overrideBpm(updatedRow)
+                            processRowUpdate={(updatedRow: TrackRow, originalRow) => {
+                                //setIsLoading(true)
+                                //overrideBpm({id: updatedRow.id, tempo: updatedRow.tempoData.manual})
                             }
                             }
                             disableColumnFilter

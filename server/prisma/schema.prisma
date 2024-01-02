@@ -8,6 +8,9 @@ datasource db {
 }
 
 model SpotifySongTempo {
-  id  String  @id
+  id  String
   tempo Float
+  source String @default("extracted")
+
+  @@id(name: "songId", [id, source])
 }

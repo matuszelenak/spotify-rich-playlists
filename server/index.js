@@ -19,6 +19,7 @@ const limiter = new Bottleneck({
 });
 
 app.use(cors())
+app.use(express.json());
 
 app.ws('/ws', function (ws, req) {
     ws.on('message', async (msg) => {
@@ -28,7 +29,10 @@ app.ws('/ws', function (ws, req) {
             if (existing.length > 0) {
                 ws.send(JSON.stringify({
                     event: "tempoExtracted",
-                    data: Object.fromEntries(existing.map(instance => [instance.id, instance.tempo.toFixed(0)]))
+                    data: Object.fromEntries(existing.map(instance => [instance.id, ({
+                        extracted: instance.source === 'extracted' ? instance.tempo.toFixed(0) : null,
+                        manual: instance.source === 'manual' ? instance.tempo.toFixed(0) : null
+                    })]))
                 }))
             }
 
@@ -43,14 +47,14 @@ app.ws('/ws', function (ws, req) {
                     await extractTempo(previewUrl, async (tempo) => {
                         try {
                             await prisma.spotifySongTempo.create({
-                                data: {id: id, tempo: tempo}
+                                data: {id: id, tempo: tempo, source: 'extracted'}
                             })
                         } catch (e) {
 
                         }
                         await ws.send(JSON.stringify({
                             event: "tempoExtracted",
-                            data: {[id]: tempo.toFixed(0)}
+                            data: {[id]: {extracted: tempo.toFixed(0)}}
                         }))
                     })
                 });
@@ -62,7 +66,7 @@ app.ws('/ws', function (ws, req) {
 const extractTempo = async (previewUrl, callback) => {
     console.log(`Extracting tempo for ${previewUrl}`)
     const audioResponse = await fetch(previewUrl).catch((reason) => {
-        console.log(reason)
+        //console.log(reason)
     });
     await context.decodeAudioData(await audioResponse.arrayBuffer(), (buffer) => {
         let audioData = [];
@@ -80,6 +84,16 @@ const extractTempo = async (previewUrl, callback) => {
         callback(parseFloat(mt.tempo))
     })
 }
+
+app.post('/bpm-override/:songId', async (req, res) => {
+    const existing = await prisma.spotifySongTempo.upsert({
+        where: {songId: {id: req.params.songId, source: 'manual'}},
+        update: {tempo: req.body.tempo},
+        create: {tempo: req.body.tempo, id: req.params.songId, source: 'manual'}
+    })
+
+    res.send({status: existing})
+})
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)

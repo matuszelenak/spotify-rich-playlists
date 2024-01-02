@@ -38,7 +38,11 @@ const getPlaylistTracks = async (playlist_id: string | undefined, user: UserProf
                     album: track.album.name,
                     duration: track.duration_ms,
                     previewUrl: track.preview_url,
-                    ourBpm: null,
+                    tempoData: {
+                        extracted: null,
+                        spotify: features.tempo,
+                        manual: null
+                    },
                     trackUri: track.uri,
                     ...features
                 }

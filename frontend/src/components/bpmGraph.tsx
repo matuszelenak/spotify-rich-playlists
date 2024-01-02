@@ -1,7 +1,8 @@
 import Chart from "react-apexcharts";
+import {TrackRow} from "../types";
 
-const BpmGraph = ({tracks}: { tracks: any }) => {
-    const tempoData = tracks.map((track, index) => [index + 1, track.ourBpm || track.tempo])
+const BpmGraph = ({tracks}: { tracks: TrackRow[] }) => {
+    const tempoData = tracks.map((track, index) => [index + 1, track.tempoData.manual || track.tempoData.extracted || track.tempoData.spotify])
     const energyData = tracks.map((track, index) => [index + 1, parseInt((track.energy * 100).toFixed(0))])
 
     return (
