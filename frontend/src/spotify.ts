@@ -1,18 +1,17 @@
 import _ from "lodash"
-import {sdk} from "./api";
-import {AudioFeatures, PlaylistedTrack, Track, UserProfile} from "@spotify/web-api-ts-sdk";
+import {AudioFeatures, PlaylistedTrack, SpotifyApi, Track, UserProfile} from "@spotify/web-api-ts-sdk";
 import {TrackRow} from "./types";
 
-const getPlaylistTracks = async (playlist_id: string | undefined, user: UserProfile | undefined): Promise<[Array<TrackRow>, boolean]> => {
+const getPlaylistTracks = async (api: SpotifyApi, playlist_id: string | undefined, user: UserProfile | undefined): Promise<[Array<TrackRow>, boolean]> => {
     if (!(playlist_id && user)) return [[], false]
 
-    const playlist = await sdk.playlists.getPlaylist(playlist_id)
+    const playlist = await api.playlists.getPlaylist(playlist_id)
 
     const tracks = []
     let offset = 0
     let page = null
     do {
-        page = await sdk.playlists.getPlaylistItems(playlist_id, undefined, undefined, 50, offset)
+        page = await api.playlists.getPlaylistItems(playlist_id, undefined, undefined, 50, offset)
         tracks.push(...page.items)
         offset += page.total
     } while (page.next)
@@ -21,7 +20,7 @@ const getPlaylistTracks = async (playlist_id: string | undefined, user: UserProf
 
     const featuresData: AudioFeatures[] = []
     for (const idChunk of _.chunk(track_ids, 100)) {
-        featuresData.push(...await sdk.tracks.audioFeatures(track_ids))
+        featuresData.push(...await api.tracks.audioFeatures(track_ids))
     }
 
     return [

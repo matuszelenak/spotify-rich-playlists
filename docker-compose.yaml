@@ -35,7 +35,7 @@ services:
       - ./server:/app
     env_file:
       - .env
-    command: nodemon -L index.js
+    command: nodemon -L index.ts
     ports:
       - "4000:4000"
 

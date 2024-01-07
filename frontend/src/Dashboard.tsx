@@ -13,14 +13,13 @@ import {
 } from "@mui/x-data-grid-pro";
 import {getPlaylistTracks} from "./spotify";
 import {NavLink, useNavigate, useParams} from "react-router-dom";
-import {axiosBackend, queryClient, sdk} from "./api";
+import {axiosBackend, useSpotifyApi, queryClient} from "./api";
 import useWebSocket from "react-use-websocket";
 import MenuIcon from '@mui/icons-material/Menu';
 import BpmGraph from "./components/bpmGraph";
 import {Delete, Refresh} from "@mui/icons-material";
 import {TrackRow} from "./types";
 import NestedMenuItem from "./components/NestedMenuItem";
-import {GridToolbar} from "./components/GridToolbar";
 import move from "./utils";
 
 function LinkTab(props: any) {
@@ -63,9 +62,11 @@ const defaultColumns: GridColDef[] = [
 ];
 
 const Dashboard = () => {
-    const {playlistId} = useParams<string>()
+    let {playlistId} = useParams<string>()
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const navigate = useNavigate()
+
+    const [sdk, token] = useSpotifyApi()
 
     const [isLoading, setIsLoading] = useState(false)
     const [tracks, setTracks] = useState<TrackRow[]>([])
@@ -73,12 +74,12 @@ const Dashboard = () => {
     const [isEditable, setIsEditable] = useState(false)
 
     const {isSuccess: userFetched, data: user} = useQuery(
-        ['user'],
+        ['user', token],
         async () => await sdk.currentUser.profile()
     )
 
     const {isSuccess: playlistsFetched, data: playlists} = useQuery(
-        ['playlists'],
+        ['playlists', token],
         async () => (await sdk.currentUser.playlists.playlists(50)).items,
         {
             onSuccess: (items) => {
@@ -112,11 +113,14 @@ const Dashboard = () => {
         columns.push({
             field: 'trackUri',
             headerName: '',
-            renderCell: (params: GridCellParams) => !!params.value && (
+            renderCell: (params: GridCellParams<TrackRow, string>) => !!params.value && (
                 // @ts-ignore
                 <Delete sx={{cursor: 'pointer'}} onClick={async () => {
                     setIsLoading(true)
-                    await sdk.playlists.removeItemsFromPlaylist(playlistId, {tracks: [{uri: params.value}]})
+                    await sdk.playlists.removeItemsFromPlaylist(
+                        playlistId || "",
+                        {tracks: [{uri: params.value || ""}]}
+                    )
                     setTracks(tracks.filter((track) => track.trackUri != params.value))
                     setIsLoading(false)
                 }}/>
@@ -136,8 +140,8 @@ const Dashboard = () => {
     });
 
     useQuery(
-        ['playlistTracks', playlistId],
-        () => getPlaylistTracks(playlistId, user),
+        ['playlistTracks', playlistId, token],
+        () => getPlaylistTracks(sdk, playlistId, user),
         {
             enabled: !!playlistId && userFetched,
             onSuccess: ([tracksData, isEditable]) => {
@@ -158,7 +162,7 @@ const Dashboard = () => {
     )
     const {mutate: spotifyReorder} = useMutation(
         async (data: any) => {
-            await sdk.playlists.movePlaylistItems(playlistId, data.range_start, data.range_length, data.insert_before)
+            await sdk.playlists.movePlaylistItems(playlistId || "", data.range_start, data.range_length, data.insert_before)
         }
     )
 
@@ -181,7 +185,7 @@ const Dashboard = () => {
             range_length: 1
         })
         setTracks(
-            move(tracks, params.oldIndex, params.targetIndex).map((track, index) => ({...track, index: index + 1}))
+            move(tracks, params.oldIndex, params.targetIndex).map((track: TrackRow, index: number) => ({...track, index: index + 1}))
         )
         setIsLoading(false)
     };
@@ -246,13 +250,13 @@ const Dashboard = () => {
                         handleClose()
                         setIsLoading(true)
                         const selectedUris = selected.map(track => track.trackUri)
-                        await sdk.playlists.removeItemsFromPlaylist(playlistId, {tracks: selectedUris.map(uri => ({uri: uri}))})
+                        await sdk.playlists.removeItemsFromPlaylist(playlistId || "", {tracks: selectedUris.map(uri => ({uri: uri}))})
                         setTracks(tracks.filter((track) => !selectedUris.includes(track.trackUri)))
                         setIsLoading(false)
                     }}>Delete</MenuItem>
                     <NestedMenuItem parentMenuOpen={!!contextMenu} label={"Add to playlist"}>
                         {playlists?.filter(p => p.owner.id == user?.id).map(p => (
-                            <MenuItem onClick={async () => {
+                            <MenuItem key={p.id} onClick={async () => {
                                 await sdk.playlists.addItemsToPlaylist(p.id, selected.map(track => track.trackUri))
                             }}>
                                 {p.name}
