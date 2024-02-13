@@ -83,8 +83,10 @@ app.get('/callback', async (req, res) => {
                 ])
             }
         )
+        const j = await resp.json()
+        console.log(j)
         res.send(
-            await resp.json()
+            j
         )
     }
 })

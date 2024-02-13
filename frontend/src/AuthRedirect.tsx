@@ -2,6 +2,7 @@ import {useLocation, useNavigate} from "react-router-dom";
 import React from "react";
 import {axiosBackend} from "./api";
 import {useQuery} from "react-query";
+import { AccessToken } from "@spotify/web-api-ts-sdk";
 
 
 function useURLQuery() {
@@ -22,8 +23,11 @@ const SpotifyAuthCallback = () => {
             url: `/callback?code=${code}`
         }),
         {
-            onSuccess: ({data}) => {
-                localStorage.setItem('spotify_access_token', JSON.stringify(data));
+            onSuccess: ({data}: {data: AccessToken}) => {
+                localStorage.setItem('spotify_access_token', JSON.stringify({
+                    ...data,
+                    expires: Date.now() + (data.expires_in * 1000)
+                }));
                 navigate('/')
             }
         }

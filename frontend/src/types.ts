@@ -9,4 +9,5 @@ export type TrackRow = {
     trackUri: string,
     tempo: number,
     id: string
+    albumUrl: string
 }
